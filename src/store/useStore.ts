@@ -32,6 +32,7 @@ export interface AppSettings {
   closeTime: string;
   pixKey: string;
   pixName: string;
+  whatsappNumber: string;
 }
 
 enum OperationType {
@@ -77,6 +78,7 @@ interface AppState {
   updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
   addReservation: (reservation: Reservation) => Promise<void>;
   updateReservationStatus: (id: string, status: 'pending' | 'confirmed' | 'cancelled') => Promise<void>;
+  removeReservation: (id: string) => Promise<void>;
   setAdminUser: (user: User | null) => void;
   initializeListeners: () => void;
   getAvailableSlots: (courtId: string, date: string) => string[];
@@ -89,6 +91,7 @@ const defaultSettings: AppSettings = {
   closeTime: '00:00',
   pixKey: '00020126580014br.gov.bcb.pix0136resenhasociety',
   pixName: 'Resenha Society Ltda',
+  whatsappNumber: '5511999999999',
 };
 
 export const useStore = create<AppState>((set, get) => ({
@@ -171,14 +174,12 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateSettings: async (newSettings) => {
     try {
-      await updateDoc(doc(db, 'settings', 'global'), newSettings);
+      const fullSettings = { ...get().settings, ...newSettings };
+      await setDoc(doc(db, 'settings', 'global'), fullSettings, { merge: true });
+      // Update local state immediately for better UX
+      set({ settings: fullSettings });
     } catch (error) {
-      if (error instanceof Error && error.message.includes('No document to update')) {
-        // Create if missing
-        await setDoc(doc(db, 'settings', 'global'), { ...get().settings, ...newSettings });
-      } else {
-        handleFirestoreError(error, OperationType.UPDATE, 'settings/global');
-      }
+      handleFirestoreError(error, OperationType.UPDATE, 'settings/global');
     }
   },
 
@@ -196,6 +197,14 @@ export const useStore = create<AppState>((set, get) => ({
       await updateDoc(doc(db, 'reservations', id), { status });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `reservations/${id}`);
+    }
+  },
+
+  removeReservation: async (id) => {
+    try {
+      await deleteDoc(doc(db, 'reservations', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `reservations/${id}`);
     }
   },
 

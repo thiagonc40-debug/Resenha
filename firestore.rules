@@ -31,12 +31,13 @@ service cloud.firestore {
 
     // Validation Blueprint: Setting
     function isValidSetting(data) {
-      return data.keys().hasAll(['appName', 'openTime', 'closeTime', 'pixKey', 'pixName'])
+      return data.keys().hasAll(['appName', 'openTime', 'closeTime', 'pixKey', 'pixName', 'whatsappNumber'])
         && data.appName is string && data.appName.size() <= 100
         && data.openTime is string && data.openTime.size() <= 10
         && data.closeTime is string && data.closeTime.size() <= 10
         && data.pixKey is string && data.pixKey.size() <= 200
-        && data.pixName is string && data.pixName.size() <= 200;
+        && data.pixName is string && data.pixName.size() <= 200
+        && data.whatsappNumber is string && data.whatsappNumber.size() <= 20;
     }
 
     // Validation Blueprint: Admin
@@ -72,9 +73,9 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow get: if isValidId(settingId);
       allow list: if true;
-      allow create: if isAuthorizedAdmin() && isValidId(settingId) && isValidSetting(incoming()) && incoming().keys().size() == 5;
+      allow create: if isAuthorizedAdmin() && isValidId(settingId) && isValidSetting(incoming()) && incoming().keys().size() == 6;
       allow update: if isAuthorizedAdmin() && isValidId(settingId) && isValidSetting(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasAny(['appName', 'openTime', 'closeTime', 'pixKey', 'pixName'])
+        incoming().diff(existing()).affectedKeys().hasAny(['appName', 'openTime', 'closeTime', 'pixKey', 'pixName', 'whatsappNumber'])
       );
       allow delete: if isAuthorizedAdmin() && isValidId(settingId);
     }

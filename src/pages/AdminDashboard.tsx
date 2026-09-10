@@ -15,6 +15,7 @@ export function AdminDashboard() {
     removeCourt, 
     updateSettings,
     updateReservationStatus,
+    removeReservation,
     getAvailableSlots,
     addReservation
   } = useStore();
@@ -323,6 +324,19 @@ export function AdminDashboard() {
                                       <span className="material-symbols-outlined text-[20px]">close</span>
                                     </button>
                                   )}
+                                  {reservation.status === 'cancelled' && (
+                                    <button 
+                                      onClick={() => {
+                                        if (window.confirm('Deseja excluir permanentemente esta reserva?')) {
+                                          removeReservation(reservation.id);
+                                        }
+                                      }}
+                                      className="p-1.5 rounded-lg bg-error/10 text-error hover:bg-error/20 transition-colors"
+                                      title="Excluir Definitivamente"
+                                    >
+                                      <span className="material-symbols-outlined text-[20px]">delete</span>
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -371,6 +385,7 @@ export function AdminDashboard() {
                           <th className="p-4 font-bold">Cliente</th>
                           <th className="p-4 font-bold">Valor</th>
                           <th className="p-4 font-bold">Status</th>
+                          <th className="p-4 text-right font-bold">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-surface-container-highest">
@@ -393,6 +408,23 @@ export function AdminDashboard() {
                                   {reservation.status === 'confirmed' ? 'Confirmado' : 
                                    reservation.status === 'pending' ? 'Pendente' : 'Cancelado'}
                                 </span>
+                              </td>
+                              <td className="p-4 whitespace-nowrap text-right">
+                                <div className="flex justify-end gap-2">
+                                  {reservation.status === 'cancelled' && (
+                                    <button 
+                                      onClick={() => {
+                                        if (window.confirm('Deseja excluir permanentemente esta reserva do histórico?')) {
+                                          removeReservation(reservation.id);
+                                        }
+                                      }}
+                                      className="p-1.5 rounded-lg bg-error/10 text-error hover:bg-error/20 transition-colors"
+                                      title="Excluir Definitivamente"
+                                    >
+                                      <span className="material-symbols-outlined text-[20px]">delete</span>
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -578,8 +610,24 @@ export function AdminDashboard() {
                     type="text" 
                     value={settings.pixName} 
                     onChange={e => updateSettings({ pixName: e.target.value })}
-                    className="w-full bg-surface-container px-space-sm py-2 rounded-lg border border-surface-container-highest focus:border-primary focus:outline-none"
+                    className="w-full bg-surface-container px-space-sm py-2 rounded-lg border border-surface-container-highest focus:border-primary focus:outline-none text-body-sm"
                   />
+                </div>
+                <div className="md:col-span-2 mt-space-sm border-t border-surface-container-highest pt-space-sm">
+                  <h4 className="font-bold text-on-surface mb-space-xs flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[20px]">chat</span> Atendimento (WhatsApp)
+                  </h4>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-body-sm text-on-surface-variant mb-1">Número do WhatsApp (apenas números com DDI + DDD)</label>
+                  <input 
+                    type="text" 
+                    value={settings.whatsappNumber || ''} 
+                    onChange={e => updateSettings({ whatsappNumber: e.target.value.replace(/\D/g, '') })}
+                    placeholder="Ex: 5511999999999"
+                    className="w-full md:w-1/2 bg-surface-container px-space-sm py-2 rounded-lg border border-surface-container-highest focus:border-primary focus:outline-none text-body-sm"
+                  />
+                  <p className="text-[12px] text-on-surface-variant mt-1">Este número receberá os comprovantes de pagamento PIX dos clientes.</p>
                 </div>
               </div>
             </div>

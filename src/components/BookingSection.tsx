@@ -43,6 +43,7 @@ export function BookingSection() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   
   const [hasChurras, setHasChurras] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState<'selection' | 'payment'>('selection');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -100,8 +101,9 @@ export function BookingSection() {
     setTimeout(() => setPixCopied(false), 2500);
   };
 
-  const handleConfirm = async () => {
+  const handleProceedToPayment = () => {
     if (!selectedCourtIdForSlot || !selectedTime) return alert("Selecione um horário primeiro.");
+    if (!customerName.trim() || !customerPhone.trim()) return alert("Preencha seu nome e telefone para prosseguir.");
     
     // VALIDATION: Check if the slot is still available right before confirming
     const currentAvailableSlots = getAvailableSlots(selectedCourtIdForSlot, selectedDate);
@@ -111,6 +113,10 @@ export function BookingSection() {
       return;
     }
 
+    setCheckoutStep('payment');
+  };
+
+  const handleFinalConfirm = async () => {
     setIsConfirming(true);
     
     // Create actual reservation
@@ -122,7 +128,7 @@ export function BookingSection() {
       endTime: `${parseInt(selectedTime.split(':')[0]) + 1}:00`.padStart(5, '0'), // 1 hour duration
       customerName,
       customerPhone,
-      status: 'confirmed' as const, // For demo purposes, instant confirmation. In real life, it would be 'pending' until webhook confirms.
+      status: 'pending' as const, // Changed to pending for manual approval
       totalPrice: totalPrice,
       createdAt: Date.now()
     };
@@ -131,6 +137,14 @@ export function BookingSection() {
       await addReservation(newReservation);
       setIsConfirming(false);
       setIsConfirmed(true);
+
+      // Trigger WhatsApp redirection
+      const phone = settings.whatsappNumber || '5511999999999';
+      const courtName = activeCourts.find(c => c.id === selectedCourtIdForSlot)?.name || '';
+      const message = `Olá! Acabei de fazer uma reserva no site.\n\n*Quadra:* ${courtName}\n*Data:* ${selectedDate.split('-').reverse().join('/')}\n*Horário:* ${selectedTime}\n*Valor Total:* R$ ${totalPrice},00\n\nSegue o meu comprovante de pagamento PIX:`;
+      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      window.open(waUrl, '_blank');
+      
     } catch (e) {
       setIsConfirming(false);
       alert("Erro ao confirmar reserva.");
@@ -320,40 +334,92 @@ export function BookingSection() {
             <span className="font-headline-lg text-headline-lg text-primary font-label-numeric">R$ {totalPrice > 0 ? totalPrice : '0'},00</span>
           </div>
 
-          <form className="flex flex-col gap-space-xs mb-space-md" onSubmit={e => e.preventDefault()}>
-            <span className="text-[11px] font-label-badge text-on-surface-variant uppercase">Dados do Organizador:</span>
-            <input 
-              value={customerName}
-              onChange={e => setCustomerName(e.target.value)}
-              className="w-full px-space-sm py-2 rounded-xl bg-surface-container text-on-surface text-body-md focus:outline-none focus:ring-1 focus:ring-primary" 
-              placeholder="Nome Completo do Responsável" type="text" 
-            />
-            <div className="grid grid-cols-1 gap-space-xs">
-              <input 
-                value={customerPhone}
-                onChange={e => setCustomerPhone(e.target.value)}
-                className="w-full px-space-sm py-2 rounded-xl bg-surface-container text-on-surface text-body-md focus:outline-none focus:ring-1 focus:ring-primary" 
-                placeholder="WhatsApp" type="tel" 
-              />
-            </div>
-          </form>
+          {!isConfirmed ? (
+            checkoutStep === 'selection' ? (
+              <>
+                <form className="flex flex-col gap-space-xs mb-space-md" onSubmit={e => e.preventDefault()}>
+                  <span className="text-[11px] font-label-badge text-on-surface-variant uppercase">Dados do Organizador:</span>
+                  <input 
+                    value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                    className="w-full px-space-sm py-2 rounded-xl bg-surface-container text-on-surface text-body-md focus:outline-none focus:ring-1 focus:ring-primary" 
+                    placeholder="Nome Completo do Responsável" type="text" 
+                  />
+                  <div className="grid grid-cols-1 gap-space-xs">
+                    <input 
+                      value={customerPhone}
+                      onChange={e => setCustomerPhone(e.target.value)}
+                      className="w-full px-space-sm py-2 rounded-xl bg-surface-container text-on-surface text-body-md focus:outline-none focus:ring-1 focus:ring-primary" 
+                      placeholder="WhatsApp" type="tel" 
+                    />
+                  </div>
+                </form>
 
-          <button 
-            onClick={handleConfirm} 
-            disabled={isConfirmed || isConfirming || !selectedTime} 
-            className={`w-full py-3.5 rounded-xl font-headline-sm text-headline-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all 
-              ${!selectedTime ? 'bg-surface-container-highest text-on-surface-variant shadow-none cursor-not-allowed' : 
-                isConfirmed ? 'bg-tertiary text-on-tertiary shadow-tertiary/30' : 
-                'bg-primary hover:bg-primary-container text-on-primary shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]'}`}
-          >
-            {isConfirming ? (
-              <><span className="material-symbols-outlined text-[24px] animate-spin">sync</span> Processando...</>
-            ) : isConfirmed ? (
-              <><span className="material-symbols-outlined text-[24px]">task_alt</span> Reserva Confirmada!</>
+                <button 
+                  onClick={handleProceedToPayment} 
+                  disabled={!selectedTime} 
+                  className={`w-full py-3.5 rounded-xl font-headline-sm text-headline-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all 
+                    ${!selectedTime ? 'bg-surface-container-highest text-on-surface-variant shadow-none cursor-not-allowed' : 
+                      'bg-primary hover:bg-primary-container text-on-primary shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]'}`}
+                >
+                  <span className="material-symbols-outlined text-[24px]">payment</span> Ir para Pagamento
+                </button>
+              </>
             ) : (
-              <><span className="material-symbols-outlined text-[24px]">verified</span> Confirmar Reserva</>
-            )}
-          </button>
+              <div className="flex flex-col gap-space-sm animate-fade-in">
+                <div className="flex items-center gap-2 mb-2">
+                  <button onClick={() => setCheckoutStep('selection')} className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors">
+                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                  </button>
+                  <span className="font-headline-sm text-headline-sm text-on-surface">Forma de Pagamento</span>
+                </div>
+
+                <div className="bg-surface-container rounded-xl p-space-sm border border-surface-container-highest flex flex-col items-center text-center gap-space-sm">
+                  <span className="material-symbols-outlined text-[48px] text-primary">qr_code_2</span>
+                  <div>
+                    <p className="text-body-sm font-bold text-on-surface">Pagamento via PIX</p>
+                    <p className="text-[12px] text-on-surface-variant mt-1">Chave: {settings.pixKey || 'Não configurada'}</p>
+                    <p className="text-[12px] text-on-surface-variant">{settings.pixName || 'Consulte o balcão'}</p>
+                  </div>
+                  <button onClick={copyPix} className="w-full py-2 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-lg font-bold text-body-sm transition-colors flex items-center justify-center gap-2">
+                    <span className="material-symbols-outlined text-[18px]">{pixCopied ? 'check' : 'content_copy'}</span>
+                    {pixCopied ? 'Chave Copiada!' : 'Copiar Chave PIX'}
+                  </button>
+                </div>
+
+                <button 
+                  onClick={handleFinalConfirm} 
+                  disabled={isConfirming} 
+                  className="w-full mt-2 py-3.5 rounded-xl bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-headline-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  {isConfirming ? (
+                    <><span className="material-symbols-outlined text-[24px] animate-spin">sync</span> Processando...</>
+                  ) : (
+                    <><span className="material-symbols-outlined text-[24px]">verified</span> Finalizar Reserva</>
+                  )}
+                </button>
+              </div>
+            )
+          ) : (
+            <div className="flex flex-col items-center justify-center py-space-md text-center animate-fade-in">
+              <div className="w-16 h-16 bg-tertiary/20 text-tertiary rounded-full flex items-center justify-center mb-space-sm">
+                <span className="material-symbols-outlined text-[32px]">task_alt</span>
+              </div>
+              <h3 className="font-headline-sm text-headline-sm text-on-surface mb-1">Quase lá!</h3>
+              <p className="text-body-sm text-on-surface-variant px-4">Sua reserva foi pré-agendada no dia {selectedDateObj?.dayStr}/{selectedDateObj?.weekday} às {selectedTime}.</p>
+              <p className="text-body-sm font-bold text-primary mt-2">Envie o comprovante no WhatsApp para confirmar.</p>
+              <button 
+                onClick={() => {
+                  setIsConfirmed(false);
+                  setCheckoutStep('selection');
+                  setSelectedTime(null);
+                }}
+                className="mt-4 px-4 py-2 bg-surface-container hover:bg-surface-container-high rounded-lg text-body-sm font-bold text-on-surface transition-colors"
+              >
+                Fazer nova reserva
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
