@@ -22,6 +22,7 @@ export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'agenda' | 'historico' | 'quadras' | 'config'>('agenda');
   const [editingCourt, setEditingCourt] = useState<Partial<Court> | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Manual Reservation State
   const [isAddingReservation, setIsAddingReservation] = useState(false);
@@ -99,6 +100,35 @@ export function AdminDashboard() {
       setNewResPhone('');
     } catch (error) {
       alert("Erro ao criar reserva manual.");
+    }
+  };
+
+  const handleBlockSlot = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!newResCourt || !newResTime) return alert('Preencha quadra e horário para bloquear o slot.');
+
+    const endTime = `${parseInt(newResTime.split(':')[0]) + 1}:00`.padStart(5, '0');
+
+    try {
+      await addReservation({
+        id: `res_block_${Date.now()}`,
+        courtId: newResCourt,
+        date: selectedDate,
+        startTime: newResTime,
+        endTime: endTime,
+        customerName: 'Horário Bloqueado',
+        customerPhone: '-',
+        totalPrice: 0,
+        status: 'blocked',
+        createdAt: Date.now()
+      });
+      setIsAddingReservation(false);
+      setNewResCourt('');
+      setNewResTime('');
+      setNewResName('');
+      setNewResPhone('');
+    } catch (error) {
+      alert("Erro ao bloquear horário.");
     }
   };
 
@@ -181,14 +211,26 @@ export function AdminDashboard() {
                 <h1 className="font-headline-lg text-headline-md mb-2">Agenda e Reservas</h1>
                 <p className="text-on-surface-variant">Gerencie os horários e visualize as reservas dos clientes.</p>
               </div>
-              <div className="flex items-center gap-3 bg-surface-container-low px-4 py-2 rounded-lg border border-surface-container-highest">
-                <span className="material-symbols-outlined text-on-surface-variant">calendar_today</span>
-                <input 
-                  type="date" 
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none outline-none text-on-surface font-bold font-body-lg"
-                />
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="flex items-center gap-2 bg-surface-container-low px-4 py-2 rounded-lg border border-surface-container-highest w-full sm:w-auto">
+                  <span className="material-symbols-outlined text-on-surface-variant">search</span>
+                  <input
+                    type="search"
+                    placeholder="Buscar cliente..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-transparent border-none outline-none text-on-surface w-full sm:w-48 placeholder:text-on-surface-variant"
+                  />
+                </div>
+                <div className="flex items-center gap-3 bg-surface-container-low px-4 py-2 rounded-lg border border-surface-container-highest w-full sm:w-auto">
+                  <span className="material-symbols-outlined text-on-surface-variant">calendar_today</span>
+                  <input 
+                    type="date" 
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="bg-transparent border-none outline-none text-on-surface font-bold font-body-lg"
+                  />
+                </div>
               </div>
             </div>
 
@@ -301,9 +343,14 @@ export function AdminDashboard() {
                     />
                   </div>
 
-                  <button type="submit" className="px-space-md py-2 bg-primary text-on-primary font-bold rounded-lg hover:scale-[1.02] transition-transform">
-                    Lançar Reserva
-                  </button>
+                  <div className="flex gap-2">
+                    <button type="submit" className="px-space-md py-2 bg-primary text-on-primary font-bold rounded-lg hover:scale-[1.02] transition-transform">
+                      Lançar Reserva
+                    </button>
+                    <button type="button" onClick={handleBlockSlot} className="px-space-md py-2 bg-surface-container-highest text-on-surface font-bold rounded-lg hover:scale-[1.02] transition-transform flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[18px]">block</span> Bloquear
+                    </button>
+                  </div>
                 </form>
               )}
 
@@ -330,6 +377,11 @@ export function AdminDashboard() {
                     <tbody className="divide-y divide-surface-container-highest">
                       {reservations
                         .filter(r => r.date === selectedDate)
+                        .filter(r => {
+                          if (!searchQuery.trim()) return true;
+                          const query = searchQuery.toLowerCase();
+                          return r.customerName.toLowerCase().includes(query) || r.customerPhone.replace(/\D/g, '').includes(query.replace(/\D/g, ''));
+                        })
                         .sort((a, b) => a.startTime.localeCompare(b.startTime))
                         .map(reservation => {
                           const court = courts.find(c => c.id === reservation.courtId);
@@ -352,13 +404,15 @@ export function AdminDashboard() {
                               <td className="p-4 whitespace-nowrap text-on-surface-variant">{reservation.customerPhone}</td>
                               <td className="p-4 whitespace-nowrap text-primary font-bold">R$ {reservation.totalPrice}</td>
                               <td className="p-4 whitespace-nowrap">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider
-                                  ${reservation.status === 'confirmed' ? 'bg-success/20 text-success' : 
-                                    reservation.status === 'pending' ? 'bg-warning/20 text-warning' : 
-                                    'bg-error/20 text-error'}`}
+                                <span className={`inline-flex items-center px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider
+                                  ${reservation.status === 'confirmed' ? 'bg-success text-on-success' : 
+                                    reservation.status === 'pending' ? 'bg-warning text-on-warning' : 
+                                    reservation.status === 'blocked' ? 'bg-surface-container-highest text-on-surface' : 
+                                    'bg-error text-on-error'}`}
                                 >
                                   {reservation.status === 'confirmed' ? 'Confirmado' : 
-                                   reservation.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                                   reservation.status === 'pending' ? 'Pendente' : 
+                                   reservation.status === 'blocked' ? 'Bloqueado' : 'Cancelado'}
                                 </span>
                               </td>
                               <td className="p-4 whitespace-nowrap text-right">
@@ -428,9 +482,21 @@ export function AdminDashboard() {
         {/* HISTORICO TAB */}
         {activeTab === 'historico' && (
           <div className="flex flex-col gap-space-lg max-w-5xl">
-            <div>
-              <h1 className="font-headline-lg text-headline-md mb-2">Histórico de Reservas</h1>
-              <p className="text-on-surface-variant">Visualize as reservas de dias anteriores.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+              <div>
+                <h1 className="font-headline-lg text-headline-md mb-2">Histórico de Reservas</h1>
+                <p className="text-on-surface-variant">Visualize as reservas de dias anteriores.</p>
+              </div>
+              <div className="flex items-center gap-2 bg-surface-container-low px-4 py-2 rounded-lg border border-surface-container-highest w-full sm:w-auto">
+                <span className="material-symbols-outlined text-on-surface-variant">search</span>
+                <input
+                  type="search"
+                  placeholder="Buscar cliente..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent border-none outline-none text-on-surface w-full sm:w-64 placeholder:text-on-surface-variant"
+                />
+              </div>
             </div>
 
             <div className="bg-surface-container-low rounded-xl border border-surface-container-highest overflow-hidden">
@@ -438,6 +504,11 @@ export function AdminDashboard() {
                 const todayStr = new Date().toISOString().split('T')[0];
                 const pastReservations = reservations
                   .filter(r => r.date < todayStr)
+                  .filter(r => {
+                    if (!searchQuery.trim()) return true;
+                    const query = searchQuery.toLowerCase();
+                    return r.customerName.toLowerCase().includes(query) || r.customerPhone.replace(/\D/g, '').includes(query.replace(/\D/g, ''));
+                  })
                   .sort((a, b) => b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime));
 
                 if (pastReservations.length === 0) {
@@ -480,13 +551,15 @@ export function AdminDashboard() {
                               </td>
                               <td className="p-4 whitespace-nowrap text-primary font-bold">R$ {reservation.totalPrice}</td>
                               <td className="p-4 whitespace-nowrap">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider
-                                  ${reservation.status === 'confirmed' ? 'bg-success/20 text-success' : 
-                                    reservation.status === 'pending' ? 'bg-warning/20 text-warning' : 
-                                    'bg-error/20 text-error'}`}
+                                <span className={`inline-flex items-center px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider
+                                  ${reservation.status === 'confirmed' ? 'bg-success text-on-success' : 
+                                    reservation.status === 'pending' ? 'bg-warning text-on-warning' : 
+                                    reservation.status === 'blocked' ? 'bg-surface-container-highest text-on-surface' : 
+                                    'bg-error text-on-error'}`}
                                 >
                                   {reservation.status === 'confirmed' ? 'Confirmado' : 
-                                   reservation.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                                   reservation.status === 'pending' ? 'Pendente' : 
+                                   reservation.status === 'blocked' ? 'Bloqueado' : 'Cancelado'}
                                 </span>
                               </td>
                               <td className="p-4 whitespace-nowrap text-right">

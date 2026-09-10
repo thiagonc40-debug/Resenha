@@ -66,8 +66,8 @@ export function BookingSection() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   
   // Customer Data for Checkout
-  const [customerName, setCustomerName] = useState('Gabriel Santos');
-  const [customerPhone, setCustomerPhone] = useState('(11) 98765-4321');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [isMonthly, setIsMonthly] = useState(false);
   
   const [timeLeft, setTimeLeft] = useState(9 * 60 + 48);
@@ -123,6 +123,25 @@ export function BookingSection() {
   const copyPix = () => {
     setPixCopied(true);
     setTimeout(() => setPixCopied(false), 2500);
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 11) value = value.slice(0, 11);
+    
+    let formatted = value;
+    if (value.length > 2) {
+      formatted = `(${value.slice(0, 2)}) `;
+      if (value.length > 7) {
+        formatted += `${value.slice(2, 7)}-${value.slice(7)}`;
+      } else {
+        formatted += value.slice(2);
+      }
+    } else if (value.length > 0) {
+      formatted = `(${value}`;
+    }
+    
+    setCustomerPhone(formatted);
   };
 
   const handleProceedToPayment = () => {
@@ -462,9 +481,9 @@ export function BookingSection() {
                   <div className="grid grid-cols-1 gap-space-xs">
                     <input 
                       value={customerPhone}
-                      onChange={e => setCustomerPhone(e.target.value)}
+                      onChange={handlePhoneChange}
                       className="w-full px-space-sm py-2 rounded-xl bg-surface-container text-on-surface text-body-md focus:outline-none focus:ring-1 focus:ring-primary" 
-                      placeholder="WhatsApp" type="tel" 
+                      placeholder="(DD) 9XXXX-XXXX" type="tel" 
                     />
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer mt-2 p-3 rounded-lg border border-surface-container-highest hover:bg-surface-container-lowest transition-colors">

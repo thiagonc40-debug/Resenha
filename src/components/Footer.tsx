@@ -1,4 +1,38 @@
+import { useStore } from '../store/useStore';
+
 export function Footer() {
+  const settings = useStore(state => state.settings);
+
+  // Map operating days from [0, 1, 2, 3, 4, 5, 6] to text
+  const getOperatingDaysText = () => {
+    const days = [...settings.operatingDays].sort((a, b) => a - b);
+    if (days.length === 0) return 'Fechado';
+    if (days.length === 7) return 'Seg a Dom';
+    
+    const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    
+    // Check if it's a continuous sequence
+    let isSequence = true;
+    for (let i = 1; i < days.length; i++) {
+      if (days[i] !== days[i-1] + 1) {
+        isSequence = false;
+        break;
+      }
+    }
+    
+    if (isSequence && days.length >= 3) {
+      return `${dayNames[days[0]]} a ${dayNames[days[days.length - 1]]}`;
+    }
+    
+    // Non-sequential or small groups (e.g. Seg, Qua e Sex)
+    const names = days.map(d => dayNames[d]);
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} e ${names[1]}`;
+    
+    const last = names.pop();
+    return `${names.join(', ')} e ${last}`;
+  };
+
   return (
     <footer className="w-full bg-surface-container-lowest mt-space-2xl">
       <div className="max-w-container-max mx-auto px-gutter-mobile lg:px-gutter-desktop py-space-xl">
@@ -51,7 +85,7 @@ export function Footer() {
               </p>
               <p className="flex items-center gap-space-2xs">
                 <span className="material-symbols-outlined text-primary text-[18px]">schedule</span>
-                <span>Seg a Dom: 06:00 às 00:00</span>
+                <span>{getOperatingDaysText()}: {settings.openTime} às {settings.closeTime}</span>
               </p>
               <p className="flex items-center gap-space-2xs">
                 <span className="material-symbols-outlined text-primary text-[18px]">call</span>

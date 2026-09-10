@@ -56,7 +56,7 @@ service cloud.firestore {
         && data.endTime is string && data.endTime.size() <= 5
         && data.customerName is string && data.customerName.size() <= 100
         && data.customerPhone is string && data.customerPhone.size() <= 20
-        && data.status in ['pending', 'confirmed', 'cancelled']
+        && data.status in ['pending', 'confirmed', 'cancelled', 'blocked']
         && data.totalPrice is number
         && data.createdAt is number;
       let hasValidMonthly = !('isMonthly' in data) || data.isMonthly is bool;

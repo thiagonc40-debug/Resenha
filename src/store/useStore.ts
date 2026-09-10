@@ -21,7 +21,7 @@ export interface Reservation {
   endTime: string;
   customerName: string;
   customerPhone: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'blocked';
   totalPrice: number;
   createdAt: number;
   isMonthly?: boolean;
@@ -80,7 +80,7 @@ interface AppState {
   removeCourt: (id: string) => Promise<void>;
   updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
   addReservation: (reservation: Reservation) => Promise<void>;
-  updateReservationStatus: (id: string, status: 'pending' | 'confirmed' | 'cancelled') => Promise<void>;
+  updateReservationStatus: (id: string, status: 'pending' | 'confirmed' | 'cancelled' | 'blocked') => Promise<void>;
   removeReservation: (id: string) => Promise<void>;
   setAdminUser: (user: User | null) => void;
   initializeListeners: () => void;
