@@ -287,7 +287,12 @@ export function AdminDashboard() {
                                 </div>
                               </td>
                               <td className="p-4 whitespace-nowrap">{court?.name || 'Quadra Removida'}</td>
-                              <td className="p-4 font-bold">{reservation.customerName}</td>
+                              <td className="p-4 font-bold">
+                                {reservation.customerName}
+                                {reservation.isMonthly && (
+                                  <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary uppercase tracking-wider">Mensalista</span>
+                                )}
+                              </td>
                               <td className="p-4 whitespace-nowrap text-on-surface-variant">{reservation.customerPhone}</td>
                               <td className="p-4 whitespace-nowrap text-primary font-bold">R$ {reservation.totalPrice}</td>
                               <td className="p-4 whitespace-nowrap">
@@ -304,7 +309,15 @@ export function AdminDashboard() {
                                 <div className="flex justify-end gap-2">
                                   {reservation.status === 'pending' && (
                                     <button 
-                                      onClick={() => updateReservationStatus(reservation.id, 'confirmed')}
+                                      onClick={() => {
+                                        if (reservation.isMonthly) {
+                                          if (window.confirm('Esta é uma reserva Mensalista. Ao confirmar, todos os horários deste pacote (4 semanas) serão confirmados automaticamente. Deseja prosseguir?')) {
+                                            updateReservationStatus(reservation.id, 'confirmed');
+                                          }
+                                        } else {
+                                          updateReservationStatus(reservation.id, 'confirmed');
+                                        }
+                                      }}
                                       className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors"
                                       title="Confirmar"
                                     >
@@ -314,7 +327,10 @@ export function AdminDashboard() {
                                   {reservation.status !== 'cancelled' && (
                                     <button 
                                       onClick={() => {
-                                        if (window.confirm('Tem certeza que deseja cancelar esta reserva?')) {
+                                        const msg = reservation.isMonthly 
+                                          ? 'Esta é uma reserva Mensalista. Ao cancelar, todos os horários futuros deste pacote serão cancelados. Tem certeza?'
+                                          : 'Tem certeza que deseja cancelar esta reserva?';
+                                        if (window.confirm(msg)) {
                                           updateReservationStatus(reservation.id, 'cancelled');
                                         }
                                       }}
@@ -327,7 +343,10 @@ export function AdminDashboard() {
                                   {reservation.status === 'cancelled' && (
                                     <button 
                                       onClick={() => {
-                                        if (window.confirm('Deseja excluir permanentemente esta reserva?')) {
+                                        const msg = reservation.isMonthly
+                                          ? 'Deseja excluir permanentemente todas as 4 reservas deste pacote do histórico?'
+                                          : 'Deseja excluir permanentemente esta reserva?';
+                                        if (window.confirm(msg)) {
                                           removeReservation(reservation.id);
                                         }
                                       }}
@@ -397,7 +416,12 @@ export function AdminDashboard() {
                                 {reservation.date.split('-').reverse().join('/')} &bull; {reservation.startTime}
                               </td>
                               <td className="p-4 whitespace-nowrap">{court?.name || 'Quadra Removida'}</td>
-                              <td className="p-4 font-bold">{reservation.customerName}</td>
+                              <td className="p-4 font-bold">
+                                {reservation.customerName}
+                                {reservation.isMonthly && (
+                                  <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary uppercase tracking-wider">Mensalista</span>
+                                )}
+                              </td>
                               <td className="p-4 whitespace-nowrap text-primary font-bold">R$ {reservation.totalPrice}</td>
                               <td className="p-4 whitespace-nowrap">
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider
@@ -414,7 +438,10 @@ export function AdminDashboard() {
                                   {reservation.status === 'cancelled' && (
                                     <button 
                                       onClick={() => {
-                                        if (window.confirm('Deseja excluir permanentemente esta reserva do histórico?')) {
+                                        const msg = reservation.isMonthly
+                                          ? 'Deseja excluir permanentemente todas as 4 reservas deste pacote do histórico?'
+                                          : 'Deseja excluir permanentemente esta reserva do histórico?';
+                                        if (window.confirm(msg)) {
                                           removeReservation(reservation.id);
                                         }
                                       }}

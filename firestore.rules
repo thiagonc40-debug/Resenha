@@ -49,8 +49,8 @@ service cloud.firestore {
 
     // Validation Blueprint: Reservation
     function isValidReservation(data) {
-      return data.keys().hasAll(['courtId', 'date', 'startTime', 'endTime', 'customerName', 'customerPhone', 'status', 'totalPrice', 'createdAt'])
-        && data.courtId is string && data.courtId.size() <= 128
+      let hasRequired = data.keys().hasAll(['courtId', 'date', 'startTime', 'endTime', 'customerName', 'customerPhone', 'status', 'totalPrice', 'createdAt']);
+      let isValidTypes = data.courtId is string && data.courtId.size() <= 128
         && data.date is string && data.date.size() <= 10
         && data.startTime is string && data.startTime.size() <= 5
         && data.endTime is string && data.endTime.size() <= 5
@@ -59,6 +59,9 @@ service cloud.firestore {
         && data.status in ['pending', 'confirmed', 'cancelled']
         && data.totalPrice is number
         && data.createdAt is number;
+      let hasValidMonthly = !('isMonthly' in data) || data.isMonthly is bool;
+      let hasValidGroupId = !('groupId' in data) || data.groupId is string && data.groupId.size() <= 128;
+      return hasRequired && isValidTypes && hasValidMonthly && hasValidGroupId;
     }
 
     match /courts/{courtId} {
@@ -94,9 +97,9 @@ service cloud.firestore {
     match /reservations/{reservationId} {
       allow get: if isValidId(reservationId);
       allow list: if true;
-      allow create: if isValidId(reservationId) && isValidReservation(incoming()) && incoming().keys().size() == 9 && exists(/databases/$(database)/documents/courts/$(incoming().courtId));
+      allow create: if isValidId(reservationId) && isValidReservation(incoming()) && (incoming().keys().size() >= 9 && incoming().keys().size() <= 11) && exists(/databases/$(database)/documents/courts/$(incoming().courtId));
       allow update: if isAuthorizedAdmin() && isValidId(reservationId) && isValidReservation(incoming()) && (
-        incoming().diff(existing()).affectedKeys().hasAny(['status', 'customerName', 'customerPhone'])
+        incoming().diff(existing()).affectedKeys().hasAny(['status', 'customerName', 'customerPhone', 'isMonthly', 'groupId'])
       );
       allow delete: if isAuthorizedAdmin() && isValidId(reservationId);
     }

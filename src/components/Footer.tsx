@@ -31,20 +31,14 @@ export function Footer() {
             <h4 className="font-headline-sm text-headline-sm text-on-surface mb-space-md">Comodidades</h4>
             <ul className="space-y-space-xs font-body-sm text-body-sm text-on-surface-variant">
               <li className="flex items-center gap-space-2xs">
-                <span className="material-symbols-outlined text-primary text-[18px]">local_parking</span>
-                <span>Estacionamento Privativo com Segurança</span>
-              </li>
-              <li className="flex items-center gap-space-2xs">
-                <span className="material-symbols-outlined text-primary text-[18px]">shower</span>
-                <span>Vestiários Completos com Ducha Aquecida</span>
-              </li>
-              <li className="flex items-center gap-space-2xs">
                 <span className="material-symbols-outlined text-secondary text-[18px]">outdoor_grill</span>
                 <span>Bar & Churrasqueiras Climatizadas</span>
               </li>
               <li className="flex items-center gap-space-2xs">
                 <span className="material-symbols-outlined text-primary text-[18px]">videocam</span>
-                <span>Transmissão & Replay com Câmeras IA</span>
+                <a href="https://clippa.com.br/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors underline decoration-transparent hover:decoration-primary">
+                  Gravação e Replay pelo APP Clippa
+                </a>
               </li>
             </ul>
           </div>
@@ -67,16 +61,14 @@ export function Footer() {
           </div>
           <div>
             <h4 className="font-headline-sm text-headline-sm text-on-surface mb-space-md">Pagamento & Segurança</h4>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-sm">Confirmação em tempo real via Pix com split automático entre os jogadores do seu time.</p>
+            <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-sm">Confirmação de reserva rápida e segura através de pagamento via Pix.</p>
             <div className="flex flex-wrap gap-space-2xs">
               <span className="px-space-sm py-space-2xs rounded-md bg-surface-container text-on-surface text-body-sm font-label-numeric">PIX INSTANTÂNEO</span>
-              <span className="px-space-sm py-space-2xs rounded-md bg-surface-container text-on-surface text-body-sm font-label-numeric">CARTÕES</span>
-              <span className="px-space-sm py-space-2xs rounded-md bg-surface-container text-on-surface text-body-sm font-label-numeric">SPLIT PAY</span>
             </div>
           </div>
         </div>
         <div className="pt-space-lg flex flex-col sm:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm border-t border-surface-container-highest">
-          <p>&copy; 2025 Resenha Society Ltda. Todos os direitos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Resenha Society Ltda. Todos os direitos reservados.</p>
           <div className="flex items-center gap-space-md">
             <a className="hover:text-on-surface transition-colors" href="#">Termos de Uso</a>
             <a className="hover:text-on-surface transition-colors" href="#">Privacidade</a>

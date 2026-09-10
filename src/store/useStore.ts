@@ -24,6 +24,8 @@ export interface Reservation {
   status: 'pending' | 'confirmed' | 'cancelled';
   totalPrice: number;
   createdAt: number;
+  isMonthly?: boolean;
+  groupId?: string;
 }
 
 export interface AppSettings {
@@ -134,8 +136,21 @@ export const useStore = create<AppState>((set, get) => ({
     // Handle midnight wrap-around if closeTime is earlier than openTime (e.g. 06:00 to 00:00)
     const endHour = closeHour === 0 ? 24 : (closeHour < openHour ? closeHour + 24 : closeHour);
     
+    // Get current time limits
+    const now = new Date();
+    const localDateString = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    const isToday = date === localDateString;
+    const currentHourReal = now.getHours();
+    
     while (currentHour < endHour) {
-      const start = `${(currentHour % 24).toString().padStart(2, '0')}:00`;
+      const h = currentHour % 24;
+      // If the slot is today, it must be at least 1 hour from current real time
+      if (isToday && h <= currentHourReal + 1) {
+        currentHour++;
+        continue;
+      }
+      
+      const start = `${h.toString().padStart(2, '0')}:00`;
       allSlots.push(start);
       currentHour++;
     }
@@ -196,7 +211,20 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateReservationStatus: async (id, status) => {
     try {
-      await updateDoc(doc(db, 'reservations', id), { status });
+      const { reservations } = get();
+      const targetRes = reservations.find(r => r.id === id);
+      
+      if (targetRes?.groupId && targetRes.isMonthly) {
+        // Find all reservations belonging to this monthly group
+        const groupReservations = reservations.filter(r => r.groupId === targetRes.groupId);
+        // Use Promise.all to update all of them concurrently
+        await Promise.all(
+          groupReservations.map(r => updateDoc(doc(db, 'reservations', r.id), { status }))
+        );
+      } else {
+        // Standard single reservation update
+        await updateDoc(doc(db, 'reservations', id), { status });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `reservations/${id}`);
     }
@@ -204,7 +232,17 @@ export const useStore = create<AppState>((set, get) => ({
 
   removeReservation: async (id) => {
     try {
-      await deleteDoc(doc(db, 'reservations', id));
+      const { reservations } = get();
+      const targetRes = reservations.find(r => r.id === id);
+      
+      if (targetRes?.groupId && targetRes.isMonthly) {
+        const groupReservations = reservations.filter(r => r.groupId === targetRes.groupId);
+        await Promise.all(
+          groupReservations.map(r => deleteDoc(doc(db, 'reservations', r.id)))
+        );
+      } else {
+        await deleteDoc(doc(db, 'reservations', id));
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `reservations/${id}`);
     }

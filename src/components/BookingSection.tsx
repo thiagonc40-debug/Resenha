@@ -14,20 +14,28 @@ const initialMessages: Message[] = [
 // Helper to generate the next 7 days
 function generateDates(startDate: Date, operatingDays: number[] = [0,1,2,3,4,5,6]) {
   const dates = [];
+  const realToday = new Date();
+  realToday.setHours(0,0,0,0);
+  
   for (let i = 0; i < 7; i++) {
     const d = new Date(startDate);
     d.setDate(startDate.getDate() + i);
+    d.setHours(0,0,0,0);
     const dayOfWeek = d.getDay();
     const isClosed = !operatingDays.includes(dayOfWeek);
     
+    const isToday = d.getTime() === realToday.getTime();
+    
+    const isoDate = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    
     dates.push({
       dateObj: d,
-      isoDate: d.toISOString().split('T')[0],
+      isoDate,
       dayStr: d.getDate().toString().padStart(2, '0'),
       weekday: new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(d).replace('.', ''),
-      isToday: i === 0,
+      isToday,
       isClosed,
-      labelStatus: isClosed ? 'Fechado' : (i === 0 ? 'Hoje' : (i < 3 ? 'Vagas' : 'Livre'))
+      labelStatus: isClosed ? 'Fechado' : (isToday ? 'Hoje' : 'Livre')
     });
   }
   return dates;
@@ -38,7 +46,12 @@ export function BookingSection() {
   const activeCourts = courts.filter(c => c.isActive);
 
   // Dynamic Date Generation
-  const [calendarDates, setCalendarDates] = useState(() => generateDates(new Date(), settings.operatingDays));
+  const [calendarStartDate, setCalendarStartDate] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [calendarDates, setCalendarDates] = useState(() => generateDates(calendarStartDate, settings.operatingDays));
   const [selectedDate, setSelectedDate] = useState(calendarDates.find(d => !d.isClosed)?.isoDate || calendarDates[0].isoDate);
   const [selectedCourt, setSelectedCourt] = useState('all');
   
@@ -55,6 +68,7 @@ export function BookingSection() {
   // Customer Data for Checkout
   const [customerName, setCustomerName] = useState('Gabriel Santos');
   const [customerPhone, setCustomerPhone] = useState('(11) 98765-4321');
+  const [isMonthly, setIsMonthly] = useState(false);
   
   const [timeLeft, setTimeLeft] = useState(9 * 60 + 48);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -63,15 +77,15 @@ export function BookingSection() {
   const [pixCopied, setPixCopied] = useState(false);
 
   useEffect(() => {
-    // Regenerate dates if day changes or settings change
-    const newDates = generateDates(new Date(), settings.operatingDays);
+    // Regenerate dates if day changes, start date changes, or settings change
+    const newDates = generateDates(calendarStartDate, settings.operatingDays);
     setCalendarDates(newDates);
-    // If selected date became closed, switch to a valid one
+    // If selected date is no longer in the current view or became closed, switch to a valid one in view
     const currentSelected = newDates.find(d => d.isoDate === selectedDate);
     if (!currentSelected || currentSelected.isClosed) {
       setSelectedDate(newDates.find(d => !d.isClosed)?.isoDate || newDates[0].isoDate);
     }
-  }, [settings.operatingDays]);
+  }, [calendarStartDate, settings.operatingDays]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -116,11 +130,28 @@ export function BookingSection() {
     if (!customerName.trim() || !customerPhone.trim()) return alert("Preencha seu nome e telefone para prosseguir.");
     
     // VALIDATION: Check if the slot is still available right before confirming
-    const currentAvailableSlots = getAvailableSlots(selectedCourtIdForSlot, selectedDate);
-    if (!currentAvailableSlots.includes(selectedTime)) {
-      alert("Desculpe, este horário acabou de ser reservado por outra pessoa. Por favor, escolha outro horário.");
-      setSelectedTime(null); // Reset their selection
-      return;
+    const datesToCheck = [selectedDate];
+    if (isMonthly) {
+      const baseDate = new Date(selectedDate);
+      // We assume date string is YYYY-MM-DD
+      baseDate.setUTCHours(12); // avoid timezone shifts
+      for (let i = 1; i < 4; i++) {
+        const nextDate = new Date(baseDate.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+        datesToCheck.push(nextDate.toISOString().split('T')[0]);
+      }
+    }
+
+    for (const d of datesToCheck) {
+      const currentAvailableSlots = getAvailableSlots(selectedCourtIdForSlot, d);
+      if (!currentAvailableSlots.includes(selectedTime)) {
+        if (isMonthly) {
+          alert(`Desculpe, este horário não está disponível em todas as 4 semanas (conflito no dia ${d.split('-').reverse().join('/')}). Por favor, escolha outro horário ou desmarque a opção Mensalista.`);
+        } else {
+          alert("Desculpe, este horário acabou de ser reservado por outra pessoa. Por favor, escolha outro horário.");
+        }
+        setSelectedTime(null); // Reset their selection
+        return;
+      }
     }
 
     setCheckoutStep('payment');
@@ -129,29 +160,56 @@ export function BookingSection() {
   const handleFinalConfirm = async () => {
     setIsConfirming(true);
     
-    // Create actual reservation
-    const newReservation = {
-      id: `res${Date.now()}`,
-      courtId: selectedCourtIdForSlot,
-      date: selectedDate,
-      startTime: selectedTime,
-      endTime: `${parseInt(selectedTime.split(':')[0]) + 1}:00`.padStart(5, '0'), // 1 hour duration
-      customerName,
-      customerPhone,
-      status: 'pending' as const, // Changed to pending for manual approval
-      totalPrice: totalPrice,
-      createdAt: Date.now()
-    };
+    if (!selectedTime || !selectedCourtIdForSlot) return;
 
     try {
-      await addReservation(newReservation);
+      if (isMonthly) {
+        const baseDate = new Date(selectedDate);
+        baseDate.setUTCHours(12);
+        const groupId = `grp_${Date.now()}`;
+        for (let i = 0; i < 4; i++) {
+          const nextDate = new Date(baseDate.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+          const isoDate = nextDate.toISOString().split('T')[0];
+          
+          await addReservation({
+            id: `res${Date.now()}_${i}`,
+            courtId: selectedCourtIdForSlot,
+            date: isoDate,
+            startTime: selectedTime,
+            endTime: `${parseInt(selectedTime.split(':')[0]) + 1}:00`.padStart(5, '0'),
+            customerName,
+            customerPhone,
+            status: 'pending' as const,
+            totalPrice: singleSessionPrice, // Price per session
+            createdAt: Date.now(),
+            isMonthly: true,
+            groupId
+          });
+        }
+      } else {
+        await addReservation({
+          id: `res${Date.now()}`,
+          courtId: selectedCourtIdForSlot,
+          date: selectedDate,
+          startTime: selectedTime,
+          endTime: `${parseInt(selectedTime.split(':')[0]) + 1}:00`.padStart(5, '0'),
+          customerName,
+          customerPhone,
+          status: 'pending' as const,
+          totalPrice,
+          createdAt: Date.now(),
+          isMonthly: false
+        });
+      }
+
       setIsConfirming(false);
       setIsConfirmed(true);
 
       // Trigger WhatsApp redirection
       const phone = settings.whatsappNumber || '5511999999999';
       const courtName = activeCourts.find(c => c.id === selectedCourtIdForSlot)?.name || '';
-      const message = `Olá! Acabei de fazer uma reserva no site.\n\n*Quadra:* ${courtName}\n*Data:* ${selectedDate.split('-').reverse().join('/')}\n*Horário:* ${selectedTime}\n*Valor Total:* R$ ${totalPrice},00\n\nSegue o meu comprovante de pagamento PIX:`;
+      const monthlyText = isMonthly ? '\n*Tipo:* Mensalista (4 semanas)' : '';
+      const message = `Olá! Acabei de fazer uma reserva no site.\n\n*Quadra:* ${courtName}\n*Data Inicio:* ${selectedDate.split('-').reverse().join('/')}\n*Horário:* ${selectedTime}${monthlyText}\n*Valor Total:* R$ ${totalPrice},00\n\nSegue o meu comprovante de pagamento PIX:`;
       const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
       window.open(waUrl, '_blank');
       
@@ -169,7 +227,8 @@ export function BookingSection() {
 
   const selectedCourtObj = activeCourts.find(c => c.id === selectedCourtIdForSlot);
   const basePrice = selectedCourtObj?.price || 0;
-  const totalPrice = basePrice + (hasChurras ? 60 : 0);
+  const singleSessionPrice = basePrice + (hasChurras ? 60 : 0);
+  const totalPrice = singleSessionPrice * (isMonthly ? 4 : 1);
 
   const selectedDateObj = calendarDates.find(d => d.isoDate === selectedDate);
   const formattedSelectedDate = selectedDateObj 
@@ -186,13 +245,37 @@ export function BookingSection() {
             <div className="flex items-center gap-space-xs">
               <span className="material-symbols-outlined text-primary text-[22px]">calendar_month</span>
               <h2 className="font-headline-sm text-headline-sm text-on-surface">Selecione a Data</h2>
-              <span className="text-body-sm font-body-sm text-on-surface-variant capitalize">&bull; {new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date())}</span>
+              <span className="text-body-sm font-body-sm text-on-surface-variant capitalize">&bull; {new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(calendarStartDate)}</span>
             </div>
             <div className="flex items-center gap-space-2xs">
-              <button aria-label="Semana anterior" className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface hover:text-primary transition-colors">
+              <button 
+                aria-label="Semana anterior" 
+                onClick={() => {
+                  setCalendarStartDate(prev => {
+                    const d = new Date(prev);
+                    d.setDate(d.getDate() - 7);
+                    // Prevent going to the past before today
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    return d < today ? today : d;
+                  });
+                }}
+                disabled={calendarStartDate.getTime() === new Date(new Date().setHours(0,0,0,0)).getTime()}
+                className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <span className="material-symbols-outlined text-[18px]">chevron_left</span>
               </button>
-              <button aria-label="Próxima semana" className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface hover:text-primary transition-colors">
+              <button 
+                aria-label="Próxima semana" 
+                onClick={() => {
+                  setCalendarStartDate(prev => {
+                    const d = new Date(prev);
+                    d.setDate(d.getDate() + 7);
+                    return d;
+                  });
+                }}
+                className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface hover:text-primary transition-colors"
+              >
                 <span className="material-symbols-outlined text-[18px]">chevron_right</span>
               </button>
             </div>
@@ -384,6 +467,18 @@ export function BookingSection() {
                       placeholder="WhatsApp" type="tel" 
                     />
                   </div>
+                  <label className="flex items-center gap-2 cursor-pointer mt-2 p-3 rounded-lg border border-surface-container-highest hover:bg-surface-container-lowest transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={isMonthly}
+                      onChange={e => setIsMonthly(e.target.checked)}
+                      className="w-5 h-5 accent-primary rounded cursor-pointer"
+                    />
+                    <div>
+                      <p className="font-bold text-body-sm text-on-surface">Reservar como Mensalista</p>
+                      <p className="text-[12px] text-on-surface-variant leading-tight mt-0.5">Agendar este horário fixo toda semana (4 semanas)</p>
+                    </div>
+                  </label>
                 </form>
 
                 <button 
