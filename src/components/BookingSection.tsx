@@ -12,18 +12,22 @@ const initialMessages: Message[] = [
 ];
 
 // Helper to generate the next 7 days
-function generateDates(startDate: Date) {
+function generateDates(startDate: Date, operatingDays: number[] = [0,1,2,3,4,5,6]) {
   const dates = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(startDate);
     d.setDate(startDate.getDate() + i);
+    const dayOfWeek = d.getDay();
+    const isClosed = !operatingDays.includes(dayOfWeek);
+    
     dates.push({
       dateObj: d,
       isoDate: d.toISOString().split('T')[0],
       dayStr: d.getDate().toString().padStart(2, '0'),
       weekday: new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(d).replace('.', ''),
       isToday: i === 0,
-      labelStatus: i === 0 ? 'Hoje' : (i < 3 ? 'Vagas' : 'Livre')
+      isClosed,
+      labelStatus: isClosed ? 'Fechado' : (i === 0 ? 'Hoje' : (i < 3 ? 'Vagas' : 'Livre'))
     });
   }
   return dates;
@@ -34,8 +38,8 @@ export function BookingSection() {
   const activeCourts = courts.filter(c => c.isActive);
 
   // Dynamic Date Generation
-  const [calendarDates, setCalendarDates] = useState(() => generateDates(new Date()));
-  const [selectedDate, setSelectedDate] = useState(calendarDates[0].isoDate);
+  const [calendarDates, setCalendarDates] = useState(() => generateDates(new Date(), settings.operatingDays));
+  const [selectedDate, setSelectedDate] = useState(calendarDates.find(d => !d.isClosed)?.isoDate || calendarDates[0].isoDate);
   const [selectedCourt, setSelectedCourt] = useState('all');
   
   // Specific Slot Selection
@@ -59,9 +63,15 @@ export function BookingSection() {
   const [pixCopied, setPixCopied] = useState(false);
 
   useEffect(() => {
-    // Regenerate dates if day changes (simplification)
-    setCalendarDates(generateDates(new Date()));
-  }, []);
+    // Regenerate dates if day changes or settings change
+    const newDates = generateDates(new Date(), settings.operatingDays);
+    setCalendarDates(newDates);
+    // If selected date became closed, switch to a valid one
+    const currentSelected = newDates.find(d => d.isoDate === selectedDate);
+    if (!currentSelected || currentSelected.isClosed) {
+      setSelectedDate(newDates.find(d => !d.isClosed)?.isoDate || newDates[0].isoDate);
+    }
+  }, [settings.operatingDays]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -188,27 +198,48 @@ export function BookingSection() {
             </div>
           </div>
           <div className="grid grid-cols-4 sm:grid-cols-7 gap-space-xs">
-            {calendarDates.map((d) => (
+            {calendarDates.map((d) => {
+              const isClosed = d.isClosed;
+              return (
               <button 
                 key={d.isoDate} 
                 onClick={() => {
-                  setSelectedDate(d.isoDate);
-                  setSelectedTime(null); // Reset time when day changes
+                  if (!isClosed) {
+                    setSelectedDate(d.isoDate);
+                    setSelectedTime(null); // Reset time when day changes
+                  }
                 }} 
-                className={`flex flex-col items-center py-space-sm px-space-xs rounded-xl transition-all ${selectedDate === d.isoDate ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-surface-container hover:bg-surface-container-high text-on-surface'}`}
+                disabled={isClosed}
+                className={`flex flex-col items-center py-space-sm px-space-xs rounded-xl transition-all ${
+                  isClosed 
+                    ? 'bg-surface-container-lowest text-surface-container-highest cursor-not-allowed opacity-50'
+                    : selectedDate === d.isoDate 
+                      ? 'bg-primary text-on-primary font-bold shadow-lg shadow-primary/20 scale-[1.02]' 
+                      : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
+                }`}
               >
-                <span className={`text-[11px] font-label-badge uppercase ${selectedDate === d.isoDate ? 'text-on-primary' : (d.isToday ? 'text-primary' : 'text-on-surface-variant')}`}>
+                <span className={`text-[11px] font-label-badge uppercase ${
+                  isClosed ? 'text-surface-container-highest' 
+                  : selectedDate === d.isoDate ? 'text-on-primary' 
+                  : (d.isToday ? 'text-primary' : 'text-on-surface-variant')
+                }`}>
                   {d.labelStatus}
                 </span>
                 <span className="font-headline-md text-headline-md font-label-numeric my-0.5">{d.dayStr}</span>
-                <span className={`text-body-sm font-body-sm uppercase ${selectedDate === d.isoDate ? 'text-on-primary' : 'text-on-surface-variant'}`}>{d.weekday}</span>
-                {selectedDate === d.isoDate ? (
-                  <span className="w-1.5 h-1.5 rounded-full bg-on-primary mt-1"></span>
-                ) : (
-                  <span className={`w-1.5 h-1.5 rounded-full mt-1 ${d.isToday ? 'bg-primary' : 'bg-surface-container-highest'}`}></span>
+                <span className={`text-body-sm font-body-sm uppercase ${
+                  isClosed ? 'text-surface-container-highest'
+                  : selectedDate === d.isoDate ? 'text-on-primary' 
+                  : 'text-on-surface-variant'
+                }`}>{d.weekday}</span>
+                {!isClosed && (
+                  selectedDate === d.isoDate ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-on-primary mt-1"></span>
+                  ) : (
+                    <span className={`w-1.5 h-1.5 rounded-full mt-1 ${d.isToday ? 'bg-primary' : 'bg-surface-container-highest'}`}></span>
+                  )
                 )}
               </button>
-            ))}
+            )})}
           </div>
         </div>
 

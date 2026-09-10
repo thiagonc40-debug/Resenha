@@ -33,6 +33,7 @@ export interface AppSettings {
   pixKey: string;
   pixName: string;
   whatsappNumber: string;
+  operatingDays: number[];
 }
 
 enum OperationType {
@@ -92,6 +93,7 @@ const defaultSettings: AppSettings = {
   pixKey: '00020126580014br.gov.bcb.pix0136resenhasociety',
   pixName: 'Resenha Society Ltda',
   whatsappNumber: '5511999999999',
+  operatingDays: [0, 1, 2, 3, 4, 5, 6],
 };
 
 export const useStore = create<AppState>((set, get) => ({

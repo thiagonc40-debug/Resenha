@@ -629,6 +629,52 @@ export function AdminDashboard() {
                   />
                   <p className="text-[12px] text-on-surface-variant mt-1">Este número receberá os comprovantes de pagamento PIX dos clientes.</p>
                 </div>
+
+                <div className="md:col-span-2 mt-space-sm border-t border-surface-container-highest pt-space-sm">
+                  <h4 className="font-bold text-on-surface mb-space-xs flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[20px]">calendar_month</span> Dias de Funcionamento
+                  </h4>
+                  <p className="text-[12px] text-on-surface-variant mb-3">Selecione em quais dias da semana a quadra estará aberta para reservas.</p>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: 0, label: 'Dom' },
+                      { value: 1, label: 'Seg' },
+                      { value: 2, label: 'Ter' },
+                      { value: 3, label: 'Qua' },
+                      { value: 4, label: 'Qui' },
+                      { value: 5, label: 'Sex' },
+                      { value: 6, label: 'Sáb' },
+                    ].map(day => {
+                      const isSelected = (settings.operatingDays || [0,1,2,3,4,5,6]).includes(day.value);
+                      return (
+                        <button
+                          key={day.value}
+                          onClick={() => {
+                            const current = settings.operatingDays || [0,1,2,3,4,5,6];
+                            const next = isSelected 
+                              ? current.filter(d => d !== day.value)
+                              : [...current, day.value].sort();
+                            
+                            // Prevent unselecting all days
+                            if (next.length > 0) {
+                              updateSettings({ operatingDays: next });
+                            } else {
+                              alert('Você precisa ter pelo menos um dia de funcionamento.');
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-lg font-bold text-body-sm transition-colors border ${
+                            isSelected 
+                              ? 'bg-primary text-on-primary border-primary' 
+                              : 'bg-surface-container text-on-surface-variant border-surface-container-highest hover:bg-surface-container-high'
+                          }`}
+                        >
+                          {day.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
