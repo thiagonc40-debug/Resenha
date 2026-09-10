@@ -192,6 +192,62 @@ export function AdminDashboard() {
               </div>
             </div>
 
+            {/* PENDING RESERVATIONS WIDGET */}
+            {reservations.filter(r => r.status === 'pending').length > 0 && (
+              <div className="bg-error/5 border border-error/20 rounded-xl p-space-md">
+                <div className="flex items-center gap-2 mb-space-md text-error">
+                  <span className="material-symbols-outlined">warning</span>
+                  <h3 className="font-bold">Solicitações Pendentes ({reservations.filter(r => r.status === 'pending').length})</h3>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {reservations.filter(r => r.status === 'pending').map(reservation => (
+                    <div key={reservation.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-surface-container-lowest rounded-lg border border-error/10">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-on-surface">{reservation.customerName}</span>
+                          <span className="text-[11px] px-2 py-0.5 rounded bg-surface-container text-on-surface-variant">{reservation.customerPhone}</span>
+                          {reservation.isMonthly && <span className="text-[11px] px-2 py-0.5 rounded bg-primary text-on-primary font-bold uppercase tracking-wider">Mensalista</span>}
+                        </div>
+                        <div className="text-body-sm text-on-surface-variant">
+                          <span className="font-bold">{reservation.date.split('-').reverse().join('/')}</span> &bull; {reservation.startTime} às {reservation.endTime}
+                          {' '}&bull; {courts.find(c => c.id === reservation.courtId)?.name}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => {
+                            if (reservation.isMonthly) {
+                              if (window.confirm('Esta é uma reserva Mensalista. Ao confirmar, todos os horários deste pacote (4 semanas) serão confirmados automaticamente. Deseja prosseguir?')) {
+                                updateReservationStatus(reservation.id, 'confirmed');
+                              }
+                            } else {
+                              updateReservationStatus(reservation.id, 'confirmed');
+                            }
+                          }}
+                          className="bg-success text-on-success px-4 py-2 rounded-lg font-bold text-body-sm hover:bg-success/90 transition-colors"
+                        >
+                          Confirmar
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const msg = reservation.isMonthly
+                              ? 'Deseja excluir permanentemente todas as 4 reservas deste pacote do histórico?'
+                              : 'Deseja excluir permanentemente esta reserva?';
+                            if (window.confirm(msg)) {
+                              removeReservation(reservation.id);
+                            }
+                          }}
+                          className="bg-surface-container text-error px-4 py-2 rounded-lg font-bold text-body-sm hover:bg-error/10 transition-colors"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="bg-surface-container-low rounded-xl border border-surface-container-highest overflow-hidden">
               <div className="p-space-md border-b border-surface-container-highest flex justify-between items-center bg-surface-container-lowest">
                 <h3 className="font-bold">Agendamentos para {selectedDate.split('-').reverse().join('/')}</h3>
