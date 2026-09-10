@@ -4,21 +4,28 @@ import { useStore, Court } from '../store/useStore';
 
 export function AdminDashboard() {
   const navigate = useNavigate();
-  const { isAdminAuthenticated, logoutAdmin, courts, settings, addCourt, updateCourt, removeCourt, updateSettings } = useStore();
+  const { isAdminAuthenticated, adminUser, courts, settings, addCourt, updateCourt, removeCourt, updateSettings } = useStore();
   const [activeTab, setActiveTab] = useState<'agenda' | 'quadras' | 'config'>('quadras');
   const [editingCourt, setEditingCourt] = useState<Partial<Court> | null>(null);
 
   useEffect(() => {
-    if (!isAdminAuthenticated) {
+    // Only redirect if explicitly not authenticated and we've verified they're not logging in.
+    // In a real app we might want a loading state for Auth.
+    if (!isAdminAuthenticated && adminUser === null) {
       navigate('/admin/login');
     }
-  }, [isAdminAuthenticated, navigate]);
+  }, [isAdminAuthenticated, adminUser, navigate]);
 
   if (!isAdminAuthenticated) return null;
 
-  const handleLogout = () => {
-    logoutAdmin();
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      const { logout } = await import('../firebase');
+      await logout();
+      navigate('/');
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleSaveCourt = () => {

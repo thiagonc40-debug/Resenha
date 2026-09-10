@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Auth Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function isBootstrappedAdmin() { return isSignedIn() && request.auth.token.email == 'thiagonc40@gmail.com' && request.auth.token.email_verified == true; }
+    function isAuthorizedAdmin() { return isAdmin() || isBootstrappedAdmin(); }
+    
+    // Data Helpers
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // Validation Blueprint: Court
+    function isValidCourt(data) {
+      return data.keys().hasAll(['name', 'type', 'price', 'features', 'imageUrl', 'isActive'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.type is string && data.type.size() > 0 && data.type.size() <= 100
+        && data.price is number
+        && data.features is list && data.features.size() <= 20
+        && (data.features.size() == 0 || data.features[0] is string)
+        && data.imageUrl is string && data.imageUrl.size() <= 1000
+        && data.isActive is bool;
+    }
+
+    // Validation Blueprint: Setting
+    function isValidSetting(data) {
+      return data.keys().hasAll(['appName', 'openTime', 'closeTime', 'pixKey', 'pixName'])
+        && data.appName is string && data.appName.size() <= 100
+        && data.openTime is string && data.openTime.size() <= 10
+        && data.closeTime is string && data.closeTime.size() <= 10
+        && data.pixKey is string && data.pixKey.size() <= 200
+        && data.pixName is string && data.pixName.size() <= 200;
+    }
+
+    // Validation Blueprint: Admin
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['email'])
+        && data.email is string && data.email.size() <= 100;
+    }
+
+    match /courts/{courtId} {
+      allow get: if isValidId(courtId);
+      allow list: if true;
+      allow create: if isAuthorizedAdmin() && isValidId(courtId) && isValidCourt(incoming()) && incoming().keys().size() == 6;
+      allow update: if isAuthorizedAdmin() && isValidId(courtId) && isValidCourt(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasAny(['name', 'type', 'price', 'features', 'imageUrl', 'isActive'])
+      );
+      allow delete: if isAuthorizedAdmin() && isValidId(courtId);
+    }
+
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if true;
+      allow create: if isAuthorizedAdmin() && isValidId(settingId) && isValidSetting(incoming()) && incoming().keys().size() == 5;
+      allow update: if isAuthorizedAdmin() && isValidId(settingId) && isValidSetting(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasAny(['appName', 'openTime', 'closeTime', 'pixKey', 'pixName'])
+      );
+      allow delete: if isAuthorizedAdmin() && isValidId(settingId);
+    }
+    
+    match /admins/{userId} {
+      allow get: if isAuthorizedAdmin() && isValidId(userId);
+      allow list: if isAuthorizedAdmin();
+      allow create: if isBootstrappedAdmin() && isValidId(userId) && isValidAdmin(incoming()) && incoming().keys().size() == 1;
+      allow update: if isBootstrappedAdmin() && isValidId(userId) && isValidAdmin(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['email'])
+      );
+      allow delete: if isBootstrappedAdmin() && isValidId(userId);
+    }
+  }
+}

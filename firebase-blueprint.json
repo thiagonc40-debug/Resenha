@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "Court": {
+      "title": "Court",
+      "description": "Represents a sports court available for booking.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "type": { "type": "string", "maxLength": 100 },
+        "price": { "type": "number" },
+        "features": { "type": "array", "maxLength": 20 },
+        "imageUrl": { "type": "string", "maxLength": 1000 },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["name", "type", "price", "features", "imageUrl", "isActive"]
+    },
+    "AppSetting": {
+      "title": "AppSetting",
+      "description": "Global application configuration and settings.",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string", "maxLength": 100 },
+        "openTime": { "type": "string", "maxLength": 10 },
+        "closeTime": { "type": "string", "maxLength": 10 },
+        "pixKey": { "type": "string", "maxLength": 200 },
+        "pixName": { "type": "string", "maxLength": 200 }
+      },
+      "required": ["appName", "openTime", "closeTime", "pixKey", "pixName"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authorized administrator user.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/courts/{courtId}": {
+      "schema": { "$ref": "#/entities/Court" },
+      "description": "Stores all courts."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/AppSetting" },
+      "description": "Stores global app settings. Typically just a singleton document 'global'."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Stores admin privileges."
+    }
+  }
+}
