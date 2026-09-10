@@ -41,14 +41,6 @@ export function Header() {
             <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
             <span>Área Admin</span>
           </Link>
-          <div className="h-6 w-[1px] bg-surface-container-highest hidden sm:block"></div>
-          <button className="hidden sm:flex items-center gap-space-sm p-space-2xs pr-space-sm rounded-full bg-surface-container hover:bg-surface-container-high transition-colors">
-            <img alt="Profile" className="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1WsyYcmdxdmWHfxeWR5_WzBwSOdAsC-oHcxBCt3-bIf-FtmqfsZ68AmjX5seVz0k7q14oFWe1umEtE79W2B1az9OxGRRrIrPTQNy_inZuATr7fGV-TNmaNWMw0Ac1_sPQkkJtoEx5Plnl_ks3glX__1Ajw6_X1QeV1PuhX19BZqFCAIGgWcPhRKPLmtTMx1iu2JWzmDYyaDLUShK2GPK68QAqECpMKpBPCn48U_qs6h-0CiPzCRU_olEyMWmBmlYT448sCIpG8LatM" />
-            <div className="hidden md:flex flex-col text-left">
-              <span className="font-body-sm text-body-sm font-bold text-on-surface leading-tight">Artilheiro VIP</span>
-              <span className="text-[10px] text-secondary leading-tight font-label-badge">NÍVEL OURO</span>
-            </div>
-          </button>
           
           <button 
             className="xl:hidden p-2 text-on-surface-variant hover:text-on-surface rounded-lg hover:bg-surface-container ml-2"
@@ -87,14 +79,6 @@ export function Header() {
               <span className="material-symbols-outlined">admin_panel_settings</span>
               Área Admin
             </Link>
-            
-            <button className="flex items-center gap-space-sm p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors mt-2">
-              <img alt="Profile" className="w-10 h-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1WsyYcmdxdmWHfxeWR5_WzBwSOdAsC-oHcxBCt3-bIf-FtmqfsZ68AmjX5seVz0k7q14oFWe1umEtE79W2B1az9OxGRRrIrPTQNy_inZuATr7fGV-TNmaNWMw0Ac1_sPQkkJtoEx5Plnl_ks3glX__1Ajw6_X1QeV1PuhX19BZqFCAIGgWcPhRKPLmtTMx1iu2JWzmDYyaDLUShK2GPK68QAqECpMKpBPCn48U_qs6h-0CiPzCRU_olEyMWmBmlYT448sCIpG8LatM" />
-              <div className="flex flex-col text-left">
-                <span className="font-body-sm text-body-sm font-bold text-on-surface leading-tight">Artilheiro VIP</span>
-                <span className="text-[10px] text-secondary leading-tight font-label-badge">NÍVEL OURO</span>
-              </div>
-            </button>
           </nav>
         </div>
       )}
