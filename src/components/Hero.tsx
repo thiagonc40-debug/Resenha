@@ -38,12 +38,12 @@ export function Hero() {
             <span className="text-[11px] text-on-surface-variant block mt-0.5">86% das vagas ocupadas</span>
           </div>
           <div className="p-space-sm rounded-lg bg-surface-container">
-            <span className="font-body-sm text-body-sm text-on-surface-variant block">Avaliação Geral</span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant block">Atendimento</span>
             <div className="flex items-center gap-1">
-              <span className="font-headline-md text-headline-md text-secondary font-label-numeric">4.9</span>
-              <span className="material-symbols-outlined text-secondary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+              <span className="material-symbols-outlined text-primary text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>call</span>
+              <span className="font-headline-sm text-headline-sm text-primary font-label-numeric">(47) 99113-9748</span>
             </div>
-            <span className="text-[11px] text-on-surface-variant block mt-0.5">+1.240 avaliações</span>
+            <span className="text-[11px] text-on-surface-variant block mt-0.5">Recepção & Eventos</span>
           </div>
           <div className="col-span-2 p-space-xs bg-primary/10 rounded-lg flex items-center justify-between px-space-sm">
             <span className="text-body-sm font-body-sm text-primary flex items-center gap-1">

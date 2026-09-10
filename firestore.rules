@@ -45,6 +45,20 @@ service cloud.firestore {
         && data.email is string && data.email.size() <= 100;
     }
 
+    // Validation Blueprint: Reservation
+    function isValidReservation(data) {
+      return data.keys().hasAll(['courtId', 'date', 'startTime', 'endTime', 'customerName', 'customerPhone', 'status', 'totalPrice', 'createdAt'])
+        && data.courtId is string && data.courtId.size() <= 128
+        && data.date is string && data.date.size() <= 10
+        && data.startTime is string && data.startTime.size() <= 5
+        && data.endTime is string && data.endTime.size() <= 5
+        && data.customerName is string && data.customerName.size() <= 100
+        && data.customerPhone is string && data.customerPhone.size() <= 20
+        && data.status in ['pending', 'confirmed', 'cancelled']
+        && data.totalPrice is number
+        && data.createdAt is number;
+    }
+
     match /courts/{courtId} {
       allow get: if isValidId(courtId);
       allow list: if true;
@@ -73,6 +87,16 @@ service cloud.firestore {
         incoming().diff(existing()).affectedKeys().hasOnly(['email'])
       );
       allow delete: if isBootstrappedAdmin() && isValidId(userId);
+    }
+
+    match /reservations/{reservationId} {
+      allow get: if isValidId(reservationId);
+      allow list: if true;
+      allow create: if isValidId(reservationId) && isValidReservation(incoming()) && incoming().keys().size() == 9 && exists(/databases/$(database)/documents/courts/$(incoming().courtId));
+      allow update: if isAuthorizedAdmin() && isValidId(reservationId) && isValidReservation(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasAny(['status', 'customerName', 'customerPhone'])
+      );
+      allow delete: if isAuthorizedAdmin() && isValidId(reservationId);
     }
   }
 }

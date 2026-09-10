@@ -35,6 +35,23 @@
         "email": { "type": "string", "maxLength": 100 }
       },
       "required": ["email"]
+    },
+    "Reservation": {
+      "title": "Reservation",
+      "description": "Represents a booking for a court.",
+      "type": "object",
+      "properties": {
+        "courtId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 10 },
+        "startTime": { "type": "string", "maxLength": 5 },
+        "endTime": { "type": "string", "maxLength": 5 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerPhone": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
+        "totalPrice": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["courtId", "date", "startTime", "endTime", "customerName", "customerPhone", "status", "totalPrice", "createdAt"]
     }
   },
   "firestore": {
@@ -49,6 +66,10 @@
     "/admins/{userId}": {
       "schema": { "$ref": "#/entities/Admin" },
       "description": "Stores admin privileges."
+    },
+    "/reservations/{reservationId}": {
+      "schema": { "$ref": "#/entities/Reservation" },
+      "description": "Stores all reservations."
     }
   }
 }

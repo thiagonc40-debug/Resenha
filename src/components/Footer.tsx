@@ -5,8 +5,17 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-xl mb-space-xl">
           <div>
             <div className="flex items-center gap-space-sm mb-space-md">
-              <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[20px]">sports_soccer</span>
+              <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-primary overflow-hidden">
+                <img 
+                  src="/logo.jpeg" 
+                  alt="Resenha Society Logo" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.removeAttribute('style');
+                  }}
+                />
+                <span className="material-symbols-outlined text-[24px]" style={{ display: 'none' }}>sports_soccer</span>
               </div>
               <span className="font-headline-sm text-headline-sm text-on-surface">Resenha Society</span>
             </div>
@@ -44,7 +53,7 @@ export function Footer() {
             <div className="space-y-space-xs font-body-sm text-body-sm text-on-surface-variant">
               <p className="flex items-start gap-space-2xs">
                 <span className="material-symbols-outlined text-primary text-[18px] mt-0.5">location_on</span>
-                <span>Av. das Nações Unidas, 1850 - Complexo Esportivo Morumbi, São Paulo - SP</span>
+                <span>Rua Ludovico Schuster, 1330 - Bairro Passa Três, Rio Negro - PR</span>
               </p>
               <p className="flex items-center gap-space-2xs">
                 <span className="material-symbols-outlined text-primary text-[18px]">schedule</span>
@@ -52,7 +61,7 @@ export function Footer() {
               </p>
               <p className="flex items-center gap-space-2xs">
                 <span className="material-symbols-outlined text-primary text-[18px]">call</span>
-                <span>(11) 98765-4321 &bull; Recepção & Eventos</span>
+                <span>(47) 99113-9748 &bull; Recepção & Eventos</span>
               </p>
             </div>
           </div>

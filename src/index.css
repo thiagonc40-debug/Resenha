@@ -16,6 +16,12 @@
   --color-on-secondary: #3f2e00;
   --color-tertiary: #50dfa4;
   --color-on-tertiary: #003824;
+  --color-error: #ff5449;
+  --color-on-error: #410002;
+  --color-success: #34d399;
+  --color-on-success: #064e3b;
+  --color-warning: #facc15;
+  --color-on-warning: #422006;
 
   --spacing-space-2xs: 0.25rem;
   --spacing-space-xs: 0.5rem;

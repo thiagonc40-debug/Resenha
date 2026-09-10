@@ -17,8 +17,12 @@ export function HomePage() {
             
             <div className="max-w-container-max mx-auto px-gutter-mobile lg:px-gutter-desktop py-space-md">
               <Hero />
-              <BookingSection />
-              <HowItWorks />
+              <div id="reservas" className="scroll-mt-24">
+                <BookingSection />
+              </div>
+              <div id="como-funciona" className="scroll-mt-24">
+                <HowItWorks />
+              </div>
             </div>
           </div>
         </div>

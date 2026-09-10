@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { db, auth } from '../firebase';
+import { collection, doc, onSnapshot, setDoc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { db, auth } from '../lib/firebase';
 
 export interface Court {
   id: string;
@@ -11,6 +11,19 @@ export interface Court {
   features: string[];
   imageUrl: string;
   isActive: boolean;
+}
+
+export interface Reservation {
+  id: string;
+  courtId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  customerName: string;
+  customerPhone: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  totalPrice: number;
+  createdAt: number;
 }
 
 export interface AppSettings {
@@ -54,6 +67,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 interface AppState {
   courts: Court[];
+  reservations: Reservation[];
   settings: AppSettings;
   adminUser: User | null;
   isAdminAuthenticated: boolean;
@@ -61,8 +75,12 @@ interface AppState {
   updateCourt: (id: string, court: Partial<Court>) => Promise<void>;
   removeCourt: (id: string) => Promise<void>;
   updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
+  addReservation: (reservation: Reservation) => Promise<void>;
+  updateReservationStatus: (id: string, status: 'pending' | 'confirmed' | 'cancelled') => Promise<void>;
   setAdminUser: (user: User | null) => void;
   initializeListeners: () => void;
+  getAvailableSlots: (courtId: string, date: string) => string[];
+  verifyAdminStatus: (user: User) => Promise<boolean>;
 }
 
 const defaultSettings: AppSettings = {
@@ -75,15 +93,60 @@ const defaultSettings: AppSettings = {
 
 export const useStore = create<AppState>((set, get) => ({
   courts: [],
+  reservations: [],
   settings: defaultSettings,
   adminUser: null,
   isAdminAuthenticated: false,
 
   setAdminUser: (user) => set({ adminUser: user, isAdminAuthenticated: !!user }),
 
+  verifyAdminStatus: async (user: User) => {
+    if (!user) return false;
+    
+    // Check if it's the bootstrapped admin
+    if (user.email === 'thiagonc40@gmail.com') {
+      return true; // Note: Firestore rules strictly require email_verified == true for writes
+    }
+
+    try {
+      const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+      return adminDoc.exists();
+    } catch (e) {
+      console.warn("User is not an admin or lacks permission to read admins collection.", e);
+      return false;
+    }
+  },
+
+  getAvailableSlots: (courtId: string, date: string) => {
+    const { settings, reservations } = get();
+    const openHour = parseInt(settings.openTime.split(':')[0], 10);
+    const closeHour = parseInt(settings.closeTime.split(':')[0], 10);
+    
+    // Generate all 1-hour slots from openTime to closeTime
+    const allSlots: string[] = [];
+    let currentHour = openHour;
+    
+    // Handle midnight wrap-around if closeTime is earlier than openTime (e.g. 06:00 to 00:00)
+    const endHour = closeHour === 0 ? 24 : (closeHour < openHour ? closeHour + 24 : closeHour);
+    
+    while (currentHour < endHour) {
+      const start = `${(currentHour % 24).toString().padStart(2, '0')}:00`;
+      allSlots.push(start);
+      currentHour++;
+    }
+
+    // Filter out slots that are already reserved (pending or confirmed)
+    const bookedSlots = reservations
+      .filter(r => r.courtId === courtId && r.date === date && r.status !== 'cancelled')
+      .map(r => r.startTime);
+
+    return allSlots.filter(slot => !bookedSlots.includes(slot));
+  },
+
   addCourt: async (court) => {
     try {
-      await setDoc(doc(db, 'courts', court.id), court);
+      const { id, ...courtData } = court;
+      await setDoc(doc(db, 'courts', id), courtData);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `courts/${court.id}`);
     }
@@ -91,7 +154,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateCourt: async (id, updatedCourt) => {
     try {
-      await updateDoc(doc(db, 'courts', id), updatedCourt);
+      const { id: _, ...courtData } = updatedCourt as any;
+      await updateDoc(doc(db, 'courts', id), courtData);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `courts/${id}`);
     }
@@ -118,10 +182,39 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  addReservation: async (reservation) => {
+    try {
+      const { id, ...reservationData } = reservation;
+      await setDoc(doc(db, 'reservations', id), reservationData);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `reservations/${reservation.id}`);
+    }
+  },
+
+  updateReservationStatus: async (id, status) => {
+    try {
+      await updateDoc(doc(db, 'reservations', id), { status });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `reservations/${id}`);
+    }
+  },
+
   initializeListeners: () => {
     // Auth Listener
-    onAuthStateChanged(auth, (user) => {
-      set({ adminUser: user, isAdminAuthenticated: !!user });
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const isAdmin = await get().verifyAdminStatus(user);
+        if (isAdmin) {
+          set({ adminUser: user, isAdminAuthenticated: true });
+        } else {
+          // If a non-admin logs in, sign them out immediately
+          await signOut(auth);
+          set({ adminUser: null, isAdminAuthenticated: false });
+          alert('Acesso negado: Este usuário não possui permissão de administrador.');
+        }
+      } else {
+        set({ adminUser: null, isAdminAuthenticated: false });
+      }
     });
 
     // Courts Listener
@@ -130,6 +223,14 @@ export const useStore = create<AppState>((set, get) => ({
       set({ courts: courtsData });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'courts');
+    });
+
+    // Reservations Listener
+    onSnapshot(collection(db, 'reservations'), (snapshot) => {
+      const reservationsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Reservation));
+      set({ reservations: reservationsData });
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'reservations');
     });
 
     // Settings Listener
