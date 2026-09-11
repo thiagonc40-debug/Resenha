@@ -41,7 +41,7 @@ export function Footer() {
             <div className="flex items-center gap-space-sm mb-space-md">
               <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-primary overflow-hidden">
                 <img 
-                  src="/logo.jpeg" 
+                  src="/logo.png" 
                   alt="Resenha Society Logo" 
                   className="w-full h-full object-contain"
                   onError={(e) => {

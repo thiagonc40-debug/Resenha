@@ -14,7 +14,7 @@ export function Header() {
           <Link className="flex items-center gap-space-sm group" to="/">
             <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-primary transition-transform group-hover:scale-105 overflow-hidden">
               <img 
-                src="/logo.jpeg" 
+                src="/logo.png" 
                 alt="Resenha Society Logo" 
                 className="w-full h-full object-contain"
                 onError={(e) => {
