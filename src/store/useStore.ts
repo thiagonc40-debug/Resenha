@@ -85,6 +85,7 @@ interface AppState {
   setAdminUser: (user: User | null) => void;
   initializeListeners: () => void;
   getAvailableSlots: (courtId: string, date: string) => string[];
+  getAdminAvailableSlots: (courtId: string, date: string) => string[];
   verifyAdminStatus: (user: User) => Promise<boolean>;
 }
 
@@ -156,6 +157,23 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     // Filter out slots that are already reserved (pending or confirmed)
+    const bookedSlots = reservations
+      .filter(r => r.courtId === courtId && r.date === date && r.status !== 'cancelled')
+      .map(r => r.startTime);
+
+    return allSlots.filter(slot => !bookedSlots.includes(slot));
+  },
+
+  getAdminAvailableSlots: (courtId: string, date: string) => {
+    const { reservations } = get();
+    const allSlots: string[] = [];
+    
+    // Admin sees all 24 hours
+    for (let currentHour = 0; currentHour < 24; currentHour++) {
+      allSlots.push(`${currentHour.toString().padStart(2, '0')}:00`);
+    }
+
+    // Filter out slots that are already reserved (pending, confirmed, blocked)
     const bookedSlots = reservations
       .filter(r => r.courtId === courtId && r.date === date && r.status !== 'cancelled')
       .map(r => r.startTime);

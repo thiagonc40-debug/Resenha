@@ -16,7 +16,7 @@ export function AdminDashboard() {
     updateSettings,
     updateReservationStatus,
     removeReservation,
-    getAvailableSlots,
+    getAdminAvailableSlots,
     addReservation
   } = useStore();
   const [activeTab, setActiveTab] = useState<'agenda' | 'historico' | 'quadras' | 'config'>('agenda');
@@ -326,7 +326,7 @@ export function AdminDashboard() {
                       className="w-full bg-surface-container-lowest px-3 py-2 rounded-lg border border-surface-container-highest focus:border-primary focus:outline-none disabled:opacity-50"
                     >
                       <option value="">Horário</option>
-                      {newResCourt && getAvailableSlots(newResCourt, selectedDate).map(slot => (
+                      {newResCourt && getAdminAvailableSlots(newResCourt, selectedDate).map(slot => (
                         <option key={slot} value={slot}>{slot}</option>
                       ))}
                     </select>
